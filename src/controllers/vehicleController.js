@@ -450,3 +450,234 @@ export const updateVehicle = async (req, res) => {
     });
   }
 };
+
+export const deactivateVehicle = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Validate MongoDB ObjectId
+    if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid vehicle ID",
+      });
+    }
+
+    // 2. Find the vehicle
+    const vehicle = await Vehicle.findById(id);
+
+    if (!vehicle) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: "Vehicle not found",
+      });
+    }
+
+    // 3. Check if the vehicle is already deactivated
+    if (!vehicle.isActive) {
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Vehicle is already deactivated",
+      });
+    }
+
+    // 4. Deactivate the vehicle
+    vehicle.isActive = false;
+
+    // 5. Save the change
+    await vehicle.save();
+
+    // 6. Return a safe response
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Vehicle deactivated successfully",
+      vehicle: {
+        id: vehicle._id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        isActive: vehicle.isActive,
+        operationalStatus: vehicle.operationalStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Deactivate vehicle error:", error);
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Unable to deactivate vehicle",
+    });
+  }
+};
+
+export const activateVehicle = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Validate the MongoDB ObjectId
+    if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid vehicle ID",
+      });
+    }
+
+    // 2. Find the vehicle, including inactive vehicles
+    const vehicle = await Vehicle.findById(id);
+
+    if (!vehicle) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: "Vehicle not found",
+      });
+    }
+
+    // 3. Check whether the vehicle is already active
+    if (vehicle.isActive) {
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Vehicle is already active",
+        vehicle: {
+          id: vehicle._id,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          isActive: vehicle.isActive,
+          operationalStatus: vehicle.operationalStatus,
+        },
+      });
+    }
+
+    // 4. Activate the vehicle
+    vehicle.isActive = true;
+
+    // 5. Save the changes to MongoDB
+    await vehicle.save();
+
+    // 6. Return safe vehicle information
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Vehicle activated successfully",
+      vehicle: {
+        id: vehicle._id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        isActive: vehicle.isActive,
+        operationalStatus: vehicle.operationalStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Activate vehicle error:", error);
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Unable to activate vehicle",
+    });
+  }
+};
+
+export const updateVehicleStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { operationalStatus } = req.body ?? {};
+
+    // 1. Validate the vehicle ID
+    if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid vehicle ID",
+      });
+    }
+
+    // 2. Validate the requested status
+    const allowedStatuses = [
+      "available",
+      "maintenance",
+      "out_of_service",
+    ];
+
+    if (
+      typeof operationalStatus !== "string" ||
+      !allowedStatuses.includes(operationalStatus)
+    ) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message:
+          "Invalid operational status. Use available, maintenance, or out_of_service",
+      });
+    }
+
+    // 3. Find the vehicle
+    const vehicle = await Vehicle.findById(id);
+
+    if (!vehicle) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: "Vehicle not found",
+      });
+    }
+
+    // 4. Check whether the status is already set
+    if (vehicle.operationalStatus === operationalStatus) {
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Vehicle already has this operational status",
+        vehicle: {
+          id: vehicle._id,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          isActive: vehicle.isActive,
+          operationalStatus: vehicle.operationalStatus,
+        },
+      });
+    }
+
+    // 5. Update operational status
+    vehicle.operationalStatus = operationalStatus;
+
+    // 6. Save to MongoDB
+    await vehicle.save();
+
+    // 7. Return safe vehicle information
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Vehicle operational status updated successfully",
+      vehicle: {
+        id: vehicle._id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        isActive: vehicle.isActive,
+        operationalStatus: vehicle.operationalStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Update vehicle status error:", error);
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Unable to update vehicle status",
+    });
+  }
+};
+
+export const getAdminVehicles = async (req, res) => {
+  try {
+    // Retrieve all vehicles regardless of activation
+    // or operational status.
+    const vehicles = await Vehicle.find({})
+      .select("-registrationNumber -__v")
+      .sort({ createdAt: -1, _id: -1 })
+      .lean();
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      results: vehicles.length,
+      vehicles,
+    });
+  } catch (error) {
+    console.error("Get admin vehicles error:", error);
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Unable to retrieve vehicle inventory",
+    });
+  }
+};

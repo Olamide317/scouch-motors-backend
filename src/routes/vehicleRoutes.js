@@ -5,6 +5,9 @@ import {
   getVehicles,
   getVehicleById,
   updateVehicle,
+  deactivateVehicle,
+  activateVehicle,
+  updateVehicleStatus,
 } from "../controllers/vehicleController.js";
 
 import { authenticate } from "../middleware/authMiddleware.js";
@@ -30,6 +33,30 @@ router.patch(
   authenticate,
   authorize("admin"),
   updateVehicle
+);
+
+// Admin-only vehicle deactivation
+router.patch(
+  "/:id/deactivate",
+  authenticate,
+  authorize("admin"),
+  deactivateVehicle
+);
+
+// Admin-only vehicle activation
+router.patch(
+  "/:id/activate",
+  authenticate,
+  authorize("admin"),
+  activateVehicle
+);
+
+// Admin-only operational status management
+router.patch(
+  "/:id/status",
+  authenticate,
+  authorize("admin"),
+  updateVehicleStatus
 );
 
 export default router;

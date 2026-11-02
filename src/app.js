@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import authRoutes from "./routes/authRoutes.js";
 import vehicleRoutes from "./routes/vehicleRoutes.js";
+import adminVehicleRoutes from "./routes/adminVehicleRoutes.js";
 
 const app = express();
 
@@ -28,5 +29,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 
 app.use("/api/vehicles", vehicleRoutes);
+
+app.use("/api/admin", adminVehicleRoutes);
 
 export default app;

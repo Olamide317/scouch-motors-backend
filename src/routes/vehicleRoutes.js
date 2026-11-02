@@ -4,6 +4,7 @@ import {
   createVehicle,
   getVehicles,
   getVehicleById,
+  updateVehicle,
 } from "../controllers/vehicleController.js";
 
 import { authenticate } from "../middleware/authMiddleware.js";
@@ -21,6 +22,14 @@ router.post(
   authenticate,
   authorize("admin"),
   createVehicle
+);
+
+// Admin-only vehicle update
+router.patch(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  updateVehicle
 );
 
 export default router;

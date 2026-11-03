@@ -4,6 +4,8 @@ import helmet from "helmet";
 import authRoutes from "./routes/authRoutes.js";
 import vehicleRoutes from "./routes/vehicleRoutes.js";
 import adminVehicleRoutes from "./routes/adminVehicleRoutes.js";
+import adminPricingRoutes from "./routes/adminPricingRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
 
 const app = express();
 
@@ -31,5 +33,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 
 app.use("/api/admin", adminVehicleRoutes);
+
+app.use("/api/admin/pricing-policy", adminPricingRoutes);
+
+app.use("/api/bookings", bookingRoutes);
 
 export default app;

@@ -97,6 +97,14 @@ const vehicleSchema = new mongoose.Schema(
       enum: ["available", "maintenance", "out_of_service"],
       default: "available",
     },
+
+    // Used to serialize availability-changing transactions
+    availabilityRevision: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false,
+    },
   },
   {
     timestamps: true,

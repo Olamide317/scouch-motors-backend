@@ -13,10 +13,19 @@ import {
 import { authenticate } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/authorize.js";
 
+import {
+  getVehicleAvailability,
+} from "../controllers/vehicleAvailabilityController.js";
+
 const router = express.Router();
 
-// Public routes
+// Public vehicle routes
 router.get("/", getVehicles);
+
+// Check vehicle availability for selected dates
+router.get("/:id/availability", getVehicleAvailability);
+
+// Retrieve one vehicle
 router.get("/:id", getVehicleById);
 
 // Admin-only routes

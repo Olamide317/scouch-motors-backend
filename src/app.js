@@ -6,6 +6,7 @@ import vehicleRoutes from "./routes/vehicleRoutes.js";
 import adminVehicleRoutes from "./routes/adminVehicleRoutes.js";
 import adminPricingRoutes from "./routes/adminPricingRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
+import adminBookingRoutes from "./routes/adminBookingRoutes.js";
 
 const app = express();
 
@@ -37,5 +38,7 @@ app.use("/api/admin", adminVehicleRoutes);
 app.use("/api/admin/pricing-policy", adminPricingRoutes);
 
 app.use("/api/bookings", bookingRoutes);
+
+app.use("/api/admin/bookings", adminBookingRoutes);
 
 export default app;

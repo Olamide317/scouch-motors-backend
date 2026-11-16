@@ -17,11 +17,7 @@ export const authenticate = async (req, res, next) => {
     // 2. Check for the Bearer token format
     const parts = authHeader.split(" ");
 
-    if (
-      parts.length !== 2 ||
-      parts[0] !== "Bearer" ||
-      !parts[1]
-    ) {
+    if (parts.length !== 2 || parts[0] !== "Bearer" || !parts[1]) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,
         message: "Invalid authorization format",
@@ -35,11 +31,9 @@ export const authenticate = async (req, res, next) => {
       throw new Error("JWT_SECRET is not configured");
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET,
-      { algorithms: ["HS256"] }
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
 
     // 4. Retrieve the user from MongoDB
     const user = await User.findById(decoded.userId);
@@ -52,7 +46,10 @@ export const authenticate = async (req, res, next) => {
     }
 
     // 5. Check that the account is still active
-    if (!user.isActive) {
+    if (
+      !user.isActive ||
+      (user.accountStatus && user.accountStatus !== "active")
+    ) {
       return res.status(StatusCodes.FORBIDDEN).json({
         success: false,
         message: "This account is currently unavailable",

@@ -7,6 +7,7 @@ import adminVehicleRoutes from "./routes/adminVehicleRoutes.js";
 import adminPricingRoutes from "./routes/adminPricingRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import adminBookingRoutes from "./routes/adminBookingRoutes.js";
+import verificationRoutes from "./modules/verification/routes/verificationRoutes.js";
 
 const app = express();
 
@@ -40,5 +41,8 @@ app.use("/api/admin/pricing-policy", adminPricingRoutes);
 app.use("/api/bookings", bookingRoutes);
 
 app.use("/api/admin/bookings", adminBookingRoutes);
+
+// Identity verification routes
+app.use("/api/verification", verificationRoutes);
 
 export default app;

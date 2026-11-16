@@ -50,10 +50,28 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    accountStatus: {
+      type: String,
+      enum: ["active", "deactivated", "suspended", "closed"],
+      default: "active",
+    },
+
+    identityRevision: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    accountLifecycleRevision: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const User = mongoose.model("User", userSchema);

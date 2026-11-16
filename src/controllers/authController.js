@@ -150,7 +150,10 @@ export const loginUser = async (req, res) => {
     }
 
     // 6. Check that the account is active
-    if (!user.isActive) {
+    if (
+      !user.isActive ||
+      (user.accountStatus && user.accountStatus !== "active")
+    ) {
       return res.status(StatusCodes.FORBIDDEN).json({
         success: false,
         message: "This account is currently unavailable",

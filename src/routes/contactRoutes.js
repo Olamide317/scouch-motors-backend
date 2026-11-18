@@ -4,6 +4,7 @@ import { rateLimit } from "express-rate-limit";
 import {
   createContactEnquiry,
   getContactEnquiries,
+  updateContactEnquiryStatus,
 } from "../controllers/contactController.js";
 
 import { authenticate } from "../middleware/authMiddleware.js";
@@ -32,6 +33,13 @@ router.get(
   authenticate,
   authorize("admin"),
   getContactEnquiries
+);
+
+router.patch(
+  "/:id/status",
+  authenticate,
+  authorize("admin"),
+  updateContactEnquiryStatus
 );
 
 export default router;

@@ -103,7 +103,7 @@ const pricingSchema = new mongoose.Schema(
         min: 0,
       },
     },
-    
+
     // NEW: Store how the best rental rate was calculated
     rateBreakdown: {
       type: [rateBreakdownSchema],
@@ -210,6 +210,13 @@ const bookingSchema = new mongoose.Schema(
     reviewedAt: {
       type: Date,
       default: null,
+    },
+
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: "",
     },
 
     holdExpiresAt: {

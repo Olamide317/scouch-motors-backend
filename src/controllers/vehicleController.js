@@ -91,6 +91,26 @@ export const createVehicle = async (req, res) => {
       });
     }
 
+    if (
+      climateControl != null &&
+      !["A/C", "Automatic Climate Control", "None"].includes(climateControl)
+    ) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid climate control option",
+      });
+    }
+
+    if (
+      mileageKm != null &&
+      (!Number.isSafeInteger(mileageKm) || mileageKm < 0)
+    ) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Mileage must be a non-negative whole number",
+      });
+    }
+
     // Only explicitly approved fields are accepted.
     const vehicle = await Vehicle.create({
       brand: brand.trim(),
@@ -103,6 +123,14 @@ export const createVehicle = async (req, res) => {
       seats,
       description,
       images,
+      climateControl: climateControl ?? undefined,
+      mileageKm: mileageKm ?? undefined,
+
+      // New admin-created vehicles are demonstration listings.
+      // Keep them inactive until their details and images are ready.
+      isDemo: true,
+      isActive: false,
+
       pricing: {
         daily: pricing.daily,
         weekly: pricing.weekly,
@@ -332,6 +360,8 @@ export const updateVehicle = async (req, res) => {
       "fuelType",
       "seats",
       "description",
+      "climateControl",
+      "mileageKm",
       "images",
       "pricing",
     ];

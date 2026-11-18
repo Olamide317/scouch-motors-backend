@@ -11,8 +11,9 @@ import {
 } from "../controllers/vehicleController.js";
 
 import {
-  receiveVehicleImage,
-} from "../middleware/uploadVehicleImage.js";
+  uploadVehicleImage,
+  setVehicleCoverImage,
+} from "../controllers/vehicleImageController.js";
 
 import {
   uploadVehicleImage,
@@ -84,6 +85,13 @@ router.post(
   authorize("admin"),
   receiveVehicleImage,
   uploadVehicleImage
+);
+
+router.patch(
+  "/:id/images/cover",
+  authenticate,
+  authorize("admin"),
+  setVehicleCoverImage
 );
 
 export default router;

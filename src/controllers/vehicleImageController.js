@@ -164,3 +164,86 @@ export async function uploadVehicleImage(req, res) {
     });
   }
 }
+
+export async function setVehicleCoverImage(req, res) {
+  try {
+    const { id } = req.params;
+    const { url } = req.body ?? {};
+
+    if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid vehicle ID.",
+      });
+    }
+
+    if (typeof url !== "string" || !url) {
+      return res.status(400).json({
+        success: false,
+        message: "A vehicle image URL is required.",
+      });
+    }
+
+    const vehicle = await Vehicle.findById(id).select("images");
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: "Vehicle not found.",
+      });
+    }
+
+    const currentImages = [...vehicle.images];
+    const imageIndex = currentImages.indexOf(url);
+
+    if (imageIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: "This image does not belong to the vehicle.",
+      });
+    }
+
+    if (imageIndex === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "This image is already the cover.",
+        coverImage: url,
+        images: currentImages,
+      });
+    }
+
+    const reorderedImages = [
+      url,
+      ...currentImages.filter((_, index) => index !== imageIndex),
+    ];
+
+    // Reject the update if another administrator changed
+    // the image array after we retrieved it.
+    const updatedVehicle = await Vehicle.findOneAndUpdate(
+      { _id: id, images: currentImages },
+      { $set: { images: reorderedImages } },
+      { new: true, runValidators: true }
+    ).select("images");
+
+    if (!updatedVehicle) {
+      return res.status(409).json({
+        success: false,
+        message: "Vehicle images changed. Refresh and try again.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Vehicle cover image updated.",
+      coverImage: updatedVehicle.images[0],
+      images: updatedVehicle.images,
+    });
+  } catch (error) {
+    console.error("Set vehicle cover image failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update vehicle cover image.",
+    });
+  }
+}

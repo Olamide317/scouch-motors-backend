@@ -68,10 +68,14 @@ export const registerUser = async (req, res) => {
       role: "customer",
     });
 
-    // 8. Return safe user information
+    // 8. Generate a token for the newly registered customer.
+    const token = generateToken(user);
+
+    // 9. Return the token and safe user information.
     return res.status(StatusCodes.CREATED).json({
       success: true,
       message: "Account registered successfully",
+      token,
       user: {
         id: user._id,
         firstName: user.firstName,

@@ -9,9 +9,8 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import adminBookingRoutes from "./routes/adminBookingRoutes.js";
 import verificationRoutes from "./modules/verification/routes/verificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-import {
-  handlePaystackTestWebhook,
-} from "./controllers/paymentWebhookController.js";
+import { handlePaystackTestWebhook } from "./controllers/paymentWebhookController.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 const app = express();
 
@@ -20,7 +19,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
-  })
+  }),
 );
 
 // Paystack must receive the raw request body.
@@ -31,7 +30,7 @@ app.post(
     type: "application/json",
     limit: "256kb",
   }),
-  handlePaystackTestWebhook
+  handlePaystackTestWebhook,
 );
 
 app.use(express.json());
@@ -63,5 +62,7 @@ app.use("/api/admin/bookings", adminBookingRoutes);
 app.use("/api/verification", verificationRoutes);
 
 app.use("/api/payments", paymentRoutes);
+
+app.use("/api/contact", contactRoutes);
 
 export default app;

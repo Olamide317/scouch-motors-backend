@@ -1,5 +1,20 @@
 import mongoose from "mongoose";
 
+const vehicleImageAssetSchema = new mongoose.Schema(
+  {
+    url: {
+      type: String,
+      required: true,
+    },
+
+    publicId: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false },
+);
+
 const vehicleSchema = new mongoose.Schema(
   {
     brand: {
@@ -53,6 +68,18 @@ const vehicleSchema = new mongoose.Schema(
       min: 1,
     },
 
+    climateControl: {
+      type: String,
+      enum: ["A/C", "Automatic Climate Control", "None"],
+      default: undefined,
+    },
+
+    mileageKm: {
+      type: Number,
+      min: [0, "Mileage cannot be negative"],
+      default: undefined,
+    },
+
     description: {
       type: String,
       trim: true,
@@ -62,6 +89,17 @@ const vehicleSchema = new mongoose.Schema(
     images: {
       type: [String],
       default: [],
+    },
+
+    imageAssets: {
+      type: [vehicleImageAssetSchema],
+      default: [],
+      select: false,
+    },
+
+    isDemo: {
+      type: Boolean,
+      default: false,
     },
 
     pricing: {

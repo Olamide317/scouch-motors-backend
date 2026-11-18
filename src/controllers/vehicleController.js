@@ -15,6 +15,8 @@ export const createVehicle = async (req, res) => {
       description,
       images,
       pricing,
+      climateControl,
+      mileageKm,
     } = req.body ?? {};
 
     // Validate basic string fields
@@ -28,8 +30,7 @@ export const createVehicle = async (req, res) => {
     };
 
     const invalidField = Object.entries(requiredStrings).find(
-      ([, value]) =>
-        typeof value !== "string" || !value.trim()
+      ([, value]) => typeof value !== "string" || !value.trim(),
     );
 
     if (invalidField) {
@@ -58,8 +59,7 @@ export const createVehicle = async (req, res) => {
       typeof pricing !== "object" ||
       ["daily", "weekly", "monthly"].some(
         (period) =>
-          !Number.isSafeInteger(pricing[period]) ||
-          pricing[period] < 0
+          !Number.isSafeInteger(pricing[period]) || pricing[period] < 0,
       )
     ) {
       return res.status(StatusCodes.BAD_REQUEST).json({
@@ -315,11 +315,7 @@ export const updateVehicle = async (req, res) => {
     }
 
     // Ensure the request body is an object
-    if (
-      !updates ||
-      typeof updates !== "object" ||
-      Array.isArray(updates)
-    ) {
+    if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
         message: "Invalid update data",
@@ -344,9 +340,7 @@ export const updateVehicle = async (req, res) => {
 
     if (
       updateFields.length === 0 ||
-      updateFields.some(
-        (field) => !allowedFields.includes(field)
-      )
+      updateFields.some((field) => !allowedFields.includes(field))
     ) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -375,8 +369,7 @@ export const updateVehicle = async (req, res) => {
           Array.isArray(pricing) ||
           Object.keys(pricing).length === 0 ||
           Object.keys(pricing).some(
-            (key) =>
-              !["daily", "weekly", "monthly"].includes(key)
+            (key) => !["daily", "weekly", "monthly"].includes(key),
           )
         ) {
           return res.status(StatusCodes.BAD_REQUEST).json({
@@ -387,10 +380,7 @@ export const updateVehicle = async (req, res) => {
 
         // Update only the supplied pricing periods
         for (const period of Object.keys(pricing)) {
-          if (
-            !Number.isSafeInteger(pricing[period]) ||
-            pricing[period] < 0
-          ) {
+          if (!Number.isSafeInteger(pricing[period]) || pricing[period] < 0) {
             return res.status(StatusCodes.BAD_REQUEST).json({
               success: false,
               message: `Invalid ${period} rental price`,
@@ -404,8 +394,7 @@ export const updateVehicle = async (req, res) => {
           !Array.isArray(updates.images) ||
           updates.images.some(
             (image) =>
-              typeof image !== "string" ||
-              !/^https:\/\/\S+$/i.test(image)
+              typeof image !== "string" || !/^https:\/\/\S+$/i.test(image),
           )
         ) {
           return res.status(StatusCodes.BAD_REQUEST).json({
@@ -436,8 +425,7 @@ export const updateVehicle = async (req, res) => {
   } catch (error) {
     console.error("Update vehicle error:", error);
 
-    if (error.name === "ValidationError" ||
-        error.name === "CastError") {
+    if (error.name === "ValidationError" || error.name === "CastError") {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
         message: "Invalid vehicle information",
@@ -588,11 +576,7 @@ export const updateVehicleStatus = async (req, res) => {
     }
 
     // 2. Validate the requested status
-    const allowedStatuses = [
-      "available",
-      "maintenance",
-      "out_of_service",
-    ];
+    const allowedStatuses = ["available", "maintenance", "out_of_service"];
 
     if (
       typeof operationalStatus !== "string" ||

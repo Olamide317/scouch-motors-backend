@@ -10,6 +10,15 @@ import {
   updateVehicleStatus,
 } from "../controllers/vehicleController.js";
 
+import {
+  receiveVehicleImage,
+} from "../middleware/uploadVehicleImage.js";
+
+import {
+  uploadVehicleImage,
+} from "../controllers/vehicleImageController.js";
+
+
 import { authenticate } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/authorize.js";
 
@@ -66,6 +75,15 @@ router.patch(
   authenticate,
   authorize("admin"),
   updateVehicleStatus
+);
+
+// ADMIN ONLY: Upload an image for a vehicle.
+router.post(
+  "/:id/images",
+  authenticate,
+  authorize("admin"),
+  receiveVehicleImage,
+  uploadVehicleImage
 );
 
 export default router;

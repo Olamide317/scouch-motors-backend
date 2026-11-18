@@ -11,6 +11,7 @@ import verificationRoutes from "./modules/verification/routes/verificationRoutes
 import paymentRoutes from "./routes/paymentRoutes.js";
 import { handlePaystackTestWebhook } from "./controllers/paymentWebhookController.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import repairEnquiryRoutes from "./routes/repairEnquiryRoutes.js";
 
 const app = express();
 
@@ -64,5 +65,7 @@ app.use("/api/verification", verificationRoutes);
 app.use("/api/payments", paymentRoutes);
 
 app.use("/api/contact", contactRoutes);
+
+app.use("/api/repair-enquiries", repairEnquiryRoutes);
 
 export default app;

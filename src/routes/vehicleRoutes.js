@@ -13,12 +13,10 @@ import {
 import {
   uploadVehicleImage,
   setVehicleCoverImage,
+  deleteVehicleImage,
 } from "../controllers/vehicleImageController.js";
 
-import {
-  uploadVehicleImage,
-} from "../controllers/vehicleImageController.js";
-
+import { receiveVehicleImage } from "../middleware/uploadVehicleImage.js";
 
 import { authenticate } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/authorize.js";
@@ -92,6 +90,13 @@ router.patch(
   authenticate,
   authorize("admin"),
   setVehicleCoverImage
+);
+
+router.delete(
+  "/:id/images",
+  authenticate,
+  authorize("admin"),
+  deleteVehicleImage
 );
 
 export default router;

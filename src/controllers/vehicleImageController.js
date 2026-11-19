@@ -10,17 +10,11 @@ function hasValidImageSignature(buffer) {
     return false;
   }
 
-  const isJpeg =
-    buffer[0] === 0xff &&
-    buffer[1] === 0xd8 &&
-    buffer[2] === 0xff;
+  const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
 
-  const isPng =
-    buffer.subarray(0, 8).equals(
-      Buffer.from([
-        137, 80, 78, 71, 13, 10, 26, 10,
-      ])
-    );
+  const isPng = buffer
+    .subarray(0, 8)
+    .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
 
   const isWebp =
     buffer.toString("ascii", 0, 4) === "RIFF" &&
@@ -32,25 +26,22 @@ function hasValidImageSignature(buffer) {
 // Upload one image from memory to Cloudinary.
 function uploadToCloudinary(buffer, folder) {
   return new Promise((resolve, reject) => {
-    const uploadStream =
-      cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: "image",
-          overwrite: false,
-        },
-        (error, result) => {
-          if (error) {
-            return reject(error);
-          }
-
-          resolve(result);
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+        overwrite: false,
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
         }
-      );
 
-    Readable.from([buffer])
-      .on("error", reject)
-      .pipe(uploadStream);
+        resolve(result);
+      },
+    );
+
+    Readable.from([buffer]).on("error", reject).pipe(uploadStream);
   });
 }
 
@@ -84,9 +75,7 @@ export async function uploadVehicleImage(req, res) {
   try {
     // Admins may upload images to existing vehicles,
     // including temporarily inactive vehicles.
-    const vehicle = await Vehicle.findById(id).select(
-      "+imageAssets"
-    );
+    const vehicle = await Vehicle.findById(id).select("+imageAssets");
 
     if (!vehicle) {
       return res.status(404).json({
@@ -98,10 +87,7 @@ export async function uploadVehicleImage(req, res) {
     // Store vehicle images inside their own folder.
     const folder = `scouch-motors/vehicles/${vehicle.id}`;
 
-    const uploaded = await uploadToCloudinary(
-      req.file.buffer,
-      folder
-    );
+    const uploaded = await uploadToCloudinary(req.file.buffer, folder);
 
     if (
       !uploaded?.public_id ||
@@ -141,22 +127,15 @@ export async function uploadVehicleImage(req, res) {
     // if the MongoDB update fails.
     if (uploadedPublicId) {
       try {
-        await cloudinary.uploader.destroy(
-          uploadedPublicId,
-          { resource_type: "image" }
-        );
+        await cloudinary.uploader.destroy(uploadedPublicId, {
+          resource_type: "image",
+        });
       } catch (cleanupError) {
-        console.error(
-          "Cloudinary cleanup failed:",
-          cleanupError
-        );
+        console.error("Cloudinary cleanup failed:", cleanupError);
       }
     }
 
-    console.error(
-      "Vehicle image upload failed:",
-      error
-    );
+    console.error("Vehicle image upload failed:", error);
 
     return res.status(500).json({
       success: false,
@@ -222,7 +201,7 @@ export async function setVehicleCoverImage(req, res) {
     const updatedVehicle = await Vehicle.findOneAndUpdate(
       { _id: id, images: currentImages },
       { $set: { images: reorderedImages } },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("images");
 
     if (!updatedVehicle) {
@@ -244,6 +223,147 @@ export async function setVehicleCoverImage(req, res) {
     return res.status(500).json({
       success: false,
       message: "Unable to update vehicle cover image.",
+    });
+  }
+}
+
+export async function deleteVehicleImage(req, res) {
+  const { id } = req.params;
+  const { url } = req.body ?? {};
+
+  if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid vehicle ID.",
+    });
+  }
+
+  if (typeof url !== "string" || !url || url.length > 2048) {
+    return res.status(400).json({
+      success: false,
+      message: "A valid vehicle image URL is required.",
+    });
+  }
+
+  try {
+    const vehicle = await Vehicle.findById(id).select(
+      "images isActive +imageAssets",
+    );
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: "Vehicle not found.",
+      });
+    }
+
+    const currentImages = [...vehicle.images];
+
+    if (!currentImages.includes(url)) {
+      return res.status(404).json({
+        success: false,
+        message: "Image not found on this vehicle.",
+      });
+    }
+
+    const remainingImages = currentImages.filter((image) => image !== url);
+
+    // Do not leave an active public listing without photos.
+    if (vehicle.isActive && remainingImages.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Deactivate the listing before removing its last image.",
+      });
+    }
+
+    const assets = vehicle.imageAssets ?? [];
+    const managedAsset = assets.find((asset) => asset.url === url);
+
+    const remainingAssets = assets
+      .filter((asset) => asset.url !== url)
+      .map((asset) => ({
+        url: asset.url,
+        publicId: asset.publicId,
+      }));
+
+    // The image array must still match the one we read.
+    // This protects against concurrent cover or upload changes.
+    const updated = await Vehicle.findOneAndUpdate(
+      {
+        _id: id,
+        images: currentImages,
+        isActive: vehicle.isActive,
+      },
+      {
+        $set: {
+          images: remainingImages,
+          imageAssets: remainingAssets,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    ).select("images");
+
+    if (!updated) {
+      return res.status(409).json({
+        success: false,
+        message: "Vehicle images changed. Refresh and try again.",
+      });
+    }
+
+    let cleanupStatus = "not_managed";
+
+    if (managedAsset) {
+      cleanupStatus = "needs_attention";
+
+      const publicId = managedAsset.publicId;
+      const expectedPrefix = `scouch-motors/vehicles/${id}/`;
+
+      if (typeof publicId === "string" && publicId.startsWith(expectedPrefix)) {
+        try {
+          const result = await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+            invalidate: true,
+          });
+
+          if (result?.result === "ok" || result?.result === "not found") {
+            cleanupStatus = "deleted";
+          }
+        } catch (cleanupError) {
+          console.error("Cloudinary cleanup failed:", cleanupError);
+        }
+      }
+
+      if (cleanupStatus === "needs_attention") {
+        console.error("Manual image cleanup required:", {
+          vehicleId: id,
+          publicId,
+        });
+      }
+    }
+
+    const messages = {
+      deleted: "Image removed from the listing and Cloudinary.",
+      not_managed:
+        "Image removed from the listing. Its external source was not deleted.",
+      needs_attention:
+        "Image removed from the listing, but Cloudinary cleanup requires attention.",
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: messages[cleanupStatus],
+      images: updated.images,
+      cleanupStatus,
+    });
+  } catch (error) {
+    console.error("Delete vehicle image failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to remove the vehicle image.",
     });
   }
 }

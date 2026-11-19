@@ -1,8 +1,18 @@
 import { StatusCodes } from "http-status-codes";
 import Vehicle from "../models/Vehicle.js";
 
+// Create a new vehicle.
 export const createVehicle = async (req, res) => {
   try {
+    // Images must be uploaded through the dedicated image endpoint.
+    if (Object.hasOwn(req.body ?? {}, "images")) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message:
+          "Create the vehicle first, then upload images through the dedicated image endpoint.",
+      });
+    }
+
     const {
       brand,
       model,
@@ -13,13 +23,12 @@ export const createVehicle = async (req, res) => {
       fuelType,
       seats,
       description,
-      images,
       pricing,
       climateControl,
       mileageKm,
     } = req.body ?? {};
 
-    // Validate basic string fields
+    // Validate required string fields.
     const requiredStrings = {
       brand,
       model,
@@ -40,7 +49,7 @@ export const createVehicle = async (req, res) => {
       });
     }
 
-    // Validate numeric fields
+    // Validate numeric fields.
     if (
       !Number.isInteger(year) ||
       year < 1900 ||
@@ -53,13 +62,15 @@ export const createVehicle = async (req, res) => {
       });
     }
 
-    // Validate rental prices in whole NGN amounts
+    // Validate rental prices in whole NGN amounts.
     if (
       !pricing ||
       typeof pricing !== "object" ||
+      Array.isArray(pricing) ||
       ["daily", "weekly", "monthly"].some(
         (period) =>
-          !Number.isSafeInteger(pricing[period]) || pricing[period] < 0,
+          !Number.isSafeInteger(pricing[period]) ||
+          pricing[period] < 0,
       )
     ) {
       return res.status(StatusCodes.BAD_REQUEST).json({
@@ -68,18 +79,7 @@ export const createVehicle = async (req, res) => {
       });
     }
 
-    if (
-      images !== undefined &&
-      (!Array.isArray(images) ||
-        images.some((image) => typeof image !== "string"))
-    ) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        success: false,
-        message: "Images must be an array of strings",
-      });
-    }
-
-    // Check registration number
+    // Check for an existing registration number.
     const existingVehicle = await Vehicle.findOne({
       registrationNumber: registrationNumber.trim().toUpperCase(),
     }).select("+registrationNumber");
@@ -91,9 +91,12 @@ export const createVehicle = async (req, res) => {
       });
     }
 
+    // Validate climate control.
     if (
       climateControl != null &&
-      !["A/C", "Automatic Climate Control", "None"].includes(climateControl)
+      !["A/C", "Automatic Climate Control", "None"].includes(
+        climateControl,
+      )
     ) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -101,6 +104,7 @@ export const createVehicle = async (req, res) => {
       });
     }
 
+    // Validate mileage.
     if (
       mileageKm != null &&
       (!Number.isSafeInteger(mileageKm) || mileageKm < 0)
@@ -122,7 +126,6 @@ export const createVehicle = async (req, res) => {
       fuelType: fuelType.trim().toLowerCase(),
       seats,
       description,
-      images,
       climateControl: climateControl ?? undefined,
       mileageKm: mileageKm ?? undefined,
 
@@ -139,7 +142,7 @@ export const createVehicle = async (req, res) => {
       },
     });
 
-    // Do not return internal registration details.
+    // Do not expose internal registration details.
     const vehicleData = vehicle.toObject();
     delete vehicleData.registrationNumber;
 
@@ -174,6 +177,7 @@ export const createVehicle = async (req, res) => {
   }
 };
 
+// Get publicly available vehicles.
 export const getVehicles = async (req, res) => {
   try {
     const {
@@ -184,7 +188,7 @@ export const getVehicles = async (req, res) => {
       limit = "12",
     } = req.query;
 
-    // Validate optional filters
+    // Validate optional filters.
     if (
       (brand !== undefined && typeof brand !== "string") ||
       (category !== undefined && typeof category !== "string")
@@ -195,7 +199,7 @@ export const getVehicles = async (req, res) => {
       });
     }
 
-    // Validate pagination values
+    // Validate pagination values.
     const isPositiveInteger = (value) =>
       /^\d+$/.test(String(value)) && Number(value) > 0;
 
@@ -215,7 +219,7 @@ export const getVehicles = async (req, res) => {
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
 
-    // Only return publicly listed, operational vehicles
+    // Only return publicly listed, operational vehicles.
     const filter = {
       isActive: true,
       operationalStatus: "available",
@@ -287,11 +291,12 @@ export const getVehicles = async (req, res) => {
   }
 };
 
+// Get one publicly available vehicle.
 export const getVehicleById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate MongoDB ObjectId format
+    // Validate MongoDB ObjectId format.
     if (!/^[a-fA-F0-9]{24}$/.test(id)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -299,7 +304,7 @@ export const getVehicleById = async (req, res) => {
       });
     }
 
-    // Retrieve only a publicly available vehicle
+    // Retrieve only a publicly available vehicle.
     const vehicle = await Vehicle.findOne({
       _id: id,
       isActive: true,
@@ -329,12 +334,14 @@ export const getVehicleById = async (req, res) => {
   }
 };
 
+// Update approved vehicle information.
+// Images can only be changed through the dedicated image endpoints.
 export const updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Validate the MongoDB ID
+    // Validate the MongoDB ID.
     if (!/^[a-fA-F0-9]{24}$/.test(id)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -342,7 +349,7 @@ export const updateVehicle = async (req, res) => {
       });
     }
 
-    // Ensure the request body is an object
+    // Ensure the request body is an object.
     if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -350,7 +357,8 @@ export const updateVehicle = async (req, res) => {
       });
     }
 
-    // Only allow updates to these fields
+    // Only allow updates to these fields.
+    // Images are deliberately excluded.
     const allowedFields = [
       "brand",
       "model",
@@ -362,7 +370,6 @@ export const updateVehicle = async (req, res) => {
       "description",
       "climateControl",
       "mileageKm",
-      "images",
       "pricing",
     ];
 
@@ -378,7 +385,7 @@ export const updateVehicle = async (req, res) => {
       });
     }
 
-    // Retrieve the existing vehicle
+    // Retrieve the existing vehicle.
     const vehicle = await Vehicle.findById(id);
 
     if (!vehicle) {
@@ -388,7 +395,7 @@ export const updateVehicle = async (req, res) => {
       });
     }
 
-    // Update approved fields
+    // Update approved fields.
     for (const field of updateFields) {
       if (field === "pricing") {
         const pricing = updates.pricing;
@@ -408,9 +415,12 @@ export const updateVehicle = async (req, res) => {
           });
         }
 
-        // Update only the supplied pricing periods
+        // Update only the supplied pricing periods.
         for (const period of Object.keys(pricing)) {
-          if (!Number.isSafeInteger(pricing[period]) || pricing[period] < 0) {
+          if (
+            !Number.isSafeInteger(pricing[period]) ||
+            pricing[period] < 0
+          ) {
             return res.status(StatusCodes.BAD_REQUEST).json({
               success: false,
               message: `Invalid ${period} rental price`,
@@ -419,30 +429,15 @@ export const updateVehicle = async (req, res) => {
 
           vehicle.pricing[period] = pricing[period];
         }
-      } else if (field === "images") {
-        if (
-          !Array.isArray(updates.images) ||
-          updates.images.some(
-            (image) =>
-              typeof image !== "string" || !/^https:\/\/\S+$/i.test(image),
-          )
-        ) {
-          return res.status(StatusCodes.BAD_REQUEST).json({
-            success: false,
-            message: "Images must contain HTTPS URLs",
-          });
-        }
-
-        vehicle.images = updates.images;
       } else {
         vehicle[field] = updates[field];
       }
     }
 
-    // Run Mongoose schema validation and save
+    // Run Mongoose schema validation and save.
     await vehicle.save();
 
-    // Exclude internal fields from the response
+    // Exclude internal fields from the response.
     const vehicleData = vehicle.toObject();
     delete vehicleData.registrationNumber;
     delete vehicleData.__v;
@@ -469,11 +464,12 @@ export const updateVehicle = async (req, res) => {
   }
 };
 
+// Deactivate a vehicle listing.
 export const deactivateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Validate MongoDB ObjectId
+    // Validate MongoDB ObjectId.
     if (!/^[a-fA-F0-9]{24}$/.test(id)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -481,7 +477,7 @@ export const deactivateVehicle = async (req, res) => {
       });
     }
 
-    // 2. Find the vehicle
+    // Find the vehicle.
     const vehicle = await Vehicle.findById(id);
 
     if (!vehicle) {
@@ -491,7 +487,7 @@ export const deactivateVehicle = async (req, res) => {
       });
     }
 
-    // 3. Check if the vehicle is already deactivated
+    // Check if the vehicle is already deactivated.
     if (!vehicle.isActive) {
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -499,13 +495,11 @@ export const deactivateVehicle = async (req, res) => {
       });
     }
 
-    // 4. Deactivate the vehicle
+    // Deactivate the vehicle.
     vehicle.isActive = false;
 
-    // 5. Save the change
     await vehicle.save();
 
-    // 6. Return a safe response
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Vehicle deactivated successfully",
@@ -527,11 +521,12 @@ export const deactivateVehicle = async (req, res) => {
   }
 };
 
+// Activate a vehicle listing.
 export const activateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Validate the MongoDB ObjectId
+    // Validate MongoDB ObjectId.
     if (!/^[a-fA-F0-9]{24}$/.test(id)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -539,38 +534,63 @@ export const activateVehicle = async (req, res) => {
       });
     }
 
-    // 2. Find the vehicle, including inactive vehicles
-    const vehicle = await Vehicle.findById(id);
+    // Atomically activate only an inactive vehicle that has an image.
+    // This prevents a concurrent image removal from leaving an active
+    // listing without photos.
+    const vehicle = await Vehicle.findOneAndUpdate(
+      {
+        _id: id,
+        isActive: false,
+        "images.0": { $exists: true },
+      },
+      {
+        $set: { isActive: true },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
 
     if (!vehicle) {
-      return res.status(StatusCodes.NOT_FOUND).json({
+      // Find the current state to identify why activation did not happen.
+      const currentVehicle = await Vehicle.findById(id);
+
+      if (!currentVehicle) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Vehicle not found",
+        });
+      }
+
+      if (currentVehicle.isActive) {
+        return res.status(StatusCodes.OK).json({
+          success: true,
+          message: "Vehicle is already active",
+          vehicle: {
+            id: currentVehicle._id,
+            brand: currentVehicle.brand,
+            model: currentVehicle.model,
+            isActive: currentVehicle.isActive,
+            operationalStatus: currentVehicle.operationalStatus,
+          },
+        });
+      }
+
+      if (!currentVehicle.images || currentVehicle.images.length === 0) {
+        return res.status(StatusCodes.CONFLICT).json({
+          success: false,
+          message:
+            "Upload at least one vehicle image before activating this listing.",
+        });
+      }
+
+      return res.status(StatusCodes.CONFLICT).json({
         success: false,
-        message: "Vehicle not found",
+        message: "Vehicle details changed. Refresh and try again.",
       });
     }
 
-    // 3. Check whether the vehicle is already active
-    if (vehicle.isActive) {
-      return res.status(StatusCodes.OK).json({
-        success: true,
-        message: "Vehicle is already active",
-        vehicle: {
-          id: vehicle._id,
-          brand: vehicle.brand,
-          model: vehicle.model,
-          isActive: vehicle.isActive,
-          operationalStatus: vehicle.operationalStatus,
-        },
-      });
-    }
-
-    // 4. Activate the vehicle
-    vehicle.isActive = true;
-
-    // 5. Save the changes to MongoDB
-    await vehicle.save();
-
-    // 6. Return safe vehicle information
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Vehicle activated successfully",
@@ -592,12 +612,13 @@ export const activateVehicle = async (req, res) => {
   }
 };
 
+// Update a vehicle's operational status.
 export const updateVehicleStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { operationalStatus } = req.body ?? {};
 
-    // 1. Validate the vehicle ID
+    // Validate the vehicle ID.
     if (!/^[a-fA-F0-9]{24}$/.test(id)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -605,8 +626,12 @@ export const updateVehicleStatus = async (req, res) => {
       });
     }
 
-    // 2. Validate the requested status
-    const allowedStatuses = ["available", "maintenance", "out_of_service"];
+    // Validate the requested status.
+    const allowedStatuses = [
+      "available",
+      "maintenance",
+      "out_of_service",
+    ];
 
     if (
       typeof operationalStatus !== "string" ||
@@ -619,7 +644,7 @@ export const updateVehicleStatus = async (req, res) => {
       });
     }
 
-    // 3. Find the vehicle
+    // Find the vehicle.
     const vehicle = await Vehicle.findById(id);
 
     if (!vehicle) {
@@ -629,7 +654,7 @@ export const updateVehicleStatus = async (req, res) => {
       });
     }
 
-    // 4. Check whether the status is already set
+    // Check whether the status is already set.
     if (vehicle.operationalStatus === operationalStatus) {
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -644,13 +669,11 @@ export const updateVehicleStatus = async (req, res) => {
       });
     }
 
-    // 5. Update operational status
+    // Update operational status.
     vehicle.operationalStatus = operationalStatus;
 
-    // 6. Save to MongoDB
     await vehicle.save();
 
-    // 7. Return safe vehicle information
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Vehicle operational status updated successfully",
@@ -672,6 +695,7 @@ export const updateVehicleStatus = async (req, res) => {
   }
 };
 
+// Get every vehicle for the administrator inventory.
 export const getAdminVehicles = async (req, res) => {
   try {
     // Retrieve all vehicles regardless of activation

@@ -7,13 +7,18 @@ import {
   getCurrentUser,
 } from "../controllers/authController.js";
 
+import {
+  loginLimiter,
+  registrationLimiter,
+} from "../middleware/authRateLimiters.js";
+
 import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Public routes
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/register", registrationLimiter, registerUser);
+router.post("/login", loginLimiter, loginUser);
 
 // Protected route
 router.get("/me", authenticate, getCurrentUser);
